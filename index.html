@@ -1019,5 +1019,602 @@ Best regards!`);
             });
         });
     </script>
+    <script>
+(function() {
+    // Configuration - Customize these values
+    const config = {
+        phoneNumber: '1234567890',
+        position: 'bottom-right',
+        size: 'normal',
+        backgroundColor: '#25D366',
+        zIndex: 9999,
+        // Contact templates for portfolio page
+        templates: [
+            {
+                id: 'hire',
+                title: '💼 Hire Me',
+                description: 'Ready to work together?',
+                message: "Hi! I'm interested in hiring you for a project. Let's discuss the details!",
+                buttonText: 'Start Hiring Process',
+                color: '#25D366'
+            },
+            {
+                id: 'question',
+                title: '❓ Have a Question',
+                description: 'Need help or info?',
+                message: "Hello! I have a question about your services/portfolio. Could you help me?",
+                buttonText: 'Ask Question',
+                color: '#2196F3'
+            },
+            {
+                id: 'consultation',
+                title: '🆓 Free Consultation',
+                description: 'Get expert advice',
+                message: "Hi! I'd like to schedule a free consultation to discuss my project needs.",
+                buttonText: 'Book Consultation',
+                color: '#FF9800'
+            }
+        ],
+        popperOptions: {
+            placement: 'top',
+            modifiers: [
+                {
+                    name: 'offset',
+                    options: {
+                        offset: [0, 15],
+                    },
+                },
+                {
+                    name: 'flip',
+                    options: {
+                        fallbackPlacements: ['left', 'right', 'bottom'],
+                    },
+                },
+            ],
+        }
+    };
+
+    // Load Popper.js from CDN
+    function loadPopper(callback) {
+        if (window.Popper) {
+            callback();
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.8/umd/popper.min.js';
+        script.onload = callback;
+        script.onerror = () => {
+            console.warn('Failed to load Popper.js, falling back to basic functionality');
+            callback();
+        };
+        document.head.appendChild(script);
+    }
+
+    // Create CSS styles
+    const styles = `
+        .wa-chat-button {
+            position: fixed;
+            width: ${config.size === 'small' ? '50px' : config.size === 'large' ? '70px' : '60px'};
+            height: ${config.size === 'small' ? '50px' : config.size === 'large' ? '70px' : '60px'};
+            background: ${config.backgroundColor};
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: ${config.zIndex};
+            border: none;
+            animation: wa-pulse 3s infinite;
+            ${getPositionStyles(config.position)}
+        }
+
+        .wa-chat-button:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 35px rgba(37, 211, 102, 0.6);
+        }
+
+        .wa-chat-button.active {
+            background: #128C7E;
+            transform: scale(1.05);
+        }
+
+        .wa-chat-button svg {
+            width: ${config.size === 'small' ? '25px' : config.size === 'large' ? '35px' : '30px'};
+            height: ${config.size === 'small' ? '25px' : config.size === 'large' ? '35px' : '30px'};
+            fill: white;
+            transition: transform 0.3s ease;
+        }
+
+        .wa-chat-button:hover svg {
+            transform: scale(1.1);
+        }
+
+        .wa-popup {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            width: 340px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            z-index: ${config.zIndex + 1};
+            opacity: 0;
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .wa-popup.show {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .wa-popup-header {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            padding: 20px 24px;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wa-popup-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .wa-popup-header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .wa-popup-avatar {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .wa-popup-avatar svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .wa-popup-info h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .wa-popup-info p {
+            margin: 4px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .wa-popup-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            font-size: 18px;
+            color: white;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .wa-popup-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .wa-popup-content {
+            padding: 24px;
+        }
+
+        .wa-popup-subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        .wa-template-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wa-template-card {
+            background: white;
+            border: 2px solid #f0f2f5;
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wa-template-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+            transition: left 0.6s;
+        }
+
+        .wa-template-card:hover::before {
+            left: 100%;
+        }
+
+        .wa-template-card:hover {
+            transform: translateY(-2px) scale(1.02);
+            border-color: var(--template-color);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .wa-template-card.hire {
+            --template-color: #25D366;
+        }
+
+        .wa-template-card.question {
+            --template-color: #2196F3;
+        }
+
+        .wa-template-card.consultation {
+            --template-color: #FF9800;
+        }
+
+        .wa-template-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .wa-template-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--template-color);
+            color: white;
+            font-weight: bold;
+        }
+
+        .wa-template-info h4 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .wa-template-info p {
+            margin: 2px 0 0 0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .wa-template-arrow {
+            margin-left: auto;
+            color: #999;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .wa-template-card:hover .wa-template-arrow {
+            color: var(--template-color);
+            transform: translateX(4px);
+        }
+
+        .wa-footer {
+            padding: 16px 24px 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #f0f2f5;
+        }
+
+        @keyframes wa-pulse {
+            0% {
+                box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            }
+            50% {
+                box-shadow: 0 4px 20px rgba(37, 211, 102, 0.8);
+            }
+            100% {
+                box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .wa-template-card {
+            animation: slideUp 0.4s ease forwards;
+        }
+
+        .wa-template-card:nth-child(1) { animation-delay: 0.1s; opacity: 0; }
+        .wa-template-card:nth-child(2) { animation-delay: 0.2s; opacity: 0; }
+        .wa-template-card:nth-child(3) { animation-delay: 0.3s; opacity: 0; }
+
+        @media (max-width: 768px) {
+            .wa-chat-button {
+                width: ${config.size === 'large' ? '60px' : '50px'};
+                height: ${config.size === 'large' ? '60px' : '50px'};
+                bottom: 15px;
+                right: 15px;
+            }
+            .wa-chat-button svg {
+                width: ${config.size === 'large' ? '30px' : '25px'};
+                height: ${config.size === 'large' ? '30px' : '25px'};
+            }
+            .wa-popup {
+                width: 300px;
+                margin: 0 10px;
+            }
+            .wa-popup-content {
+                padding: 20px;
+            }
+        }
+    `;
+
+    function getPositionStyles(position) {
+        const positions = {
+            'bottom-right': 'bottom: 20px; right: 20px;',
+            'bottom-left': 'bottom: 20px; left: 20px;',
+            'top-right': 'top: 20px; right: 20px;',
+            'top-left': 'top: 20px; left: 20px;'
+        };
+        return positions[position] || positions['bottom-right'];
+    }
+
+    // WhatsApp SVG icon
+    const whatsappIcon = `
+        <svg viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+        </svg>
+    `;
+
+    // Create and inject styles
+    function injectStyles() {
+        const styleSheet = document.createElement('style');
+        styleSheet.type = 'text/css';
+        styleSheet.innerHTML = styles;
+        document.head.appendChild(styleSheet);
+    }
+
+    // Create popup with templates
+    function createPopup() {
+        const popup = document.createElement('div');
+        popup.className = 'wa-popup';
+
+        const templatesHtml = config.templates.map(template => `
+            <div class="wa-template-card ${template.id}" data-template="${template.id}">
+                <div class="wa-template-header">
+                    <div class="wa-template-icon">${template.title.split(' ')[0]}</div>
+                    <div class="wa-template-info">
+                        <h4>${template.title}</h4>
+                        <p>${template.description}</p>
+                    </div>
+                    <div class="wa-template-arrow">→</div>
+                </div>
+            </div>
+        `).join('');
+
+        popup.innerHTML = `
+            <div class="wa-popup-header">
+                <button class="wa-popup-close">&times;</button>
+                <div class="wa-popup-header-content">
+                    <div class="wa-popup-avatar">
+                        ${whatsappIcon}
+                    </div>
+                    <div class="wa-popup-info">
+                        <h3>Let's Connect!</h3>
+                        <p>Choose how you'd like to reach out</p>
+                    </div>
+                </div>
+            </div>
+            <div class="wa-popup-content">
+                <div class="wa-popup-subtitle">Select a contact option below:</div>
+                <div class="wa-template-options">
+                    ${templatesHtml}
+                </div>
+            </div>
+            <div class="wa-footer">
+                Click any option to start chatting on WhatsApp
+            </div>
+        `;
+
+        // Add click handlers for templates
+        popup.addEventListener('click', function(e) {
+            const templateCard = e.target.closest('.wa-template-card');
+            if (templateCard) {
+                const templateId = templateCard.dataset.template;
+                const template = config.templates.find(t => t.id === templateId);
+                if (template) {
+                    const whatsappUrl = `https://wa.me/${config.phoneNumber}?text=${encodeURIComponent(template.message)}`;
+                    window.open(whatsappUrl, '_blank');
+                    popup.classList.remove('show');
+                    document.querySelector('.wa-chat-button').classList.remove('active');
+                }
+            }
+
+            if (e.target.classList.contains('wa-popup-close')) {
+                popup.classList.remove('show');
+                document.querySelector('.wa-chat-button').classList.remove('active');
+            }
+        });
+
+        document.body.appendChild(popup);
+        return popup;
+    }
+
+    // Create WhatsApp button
+    function createButton() {
+        const button = document.createElement('button');
+        button.className = 'wa-chat-button';
+        button.innerHTML = whatsappIcon;
+        button.title = 'Contact me via WhatsApp';
+
+        let popperInstance = null;
+        let popup = null;
+
+        // Initialize Popper instances
+        function initPopper() {
+            if (window.Popper) {
+                popup = createPopup();
+                popperInstance = window.Popper.createPopper(button, popup, config.popperOptions);
+            } else {
+                // Fallback without Popper
+                popup = createPopup();
+            }
+        }
+
+        // Button click handler
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            if (popup) {
+                const isShowing = popup.classList.contains('show');
+
+                if (isShowing) {
+                    popup.classList.remove('show');
+                    button.classList.remove('active');
+                } else {
+                    popup.classList.add('show');
+                    button.classList.add('active');
+                    if (popperInstance) {
+                        popperInstance.update();
+                    }
+                }
+            }
+
+            // Click animation
+            this.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 200);
+        });
+
+        // Close popup when clicking outside
+        document.addEventListener('click', function(e) {
+            if (popup && !button.contains(e.target) && !popup.contains(e.target)) {
+                popup.classList.remove('show');
+                button.classList.remove('active');
+            }
+        });
+
+        // Initialize Popper after it loads
+        loadPopper(initPopper);
+
+        return button;
+    }
+
+    // Initialize the button
+    function init() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                injectStyles();
+                document.body.appendChild(createButton());
+            });
+        } else {
+            injectStyles();
+            document.body.appendChild(createButton());
+        }
+    }
+
+    // Public API
+    window.WhatsAppButton = {
+        updateConfig: function(newConfig) {
+            Object.assign(config, newConfig);
+            const existingButton = document.querySelector('.wa-chat-button');
+            if (existingButton) existingButton.remove();
+            const existingPopup = document.querySelector('.wa-popup');
+            if (existingPopup) existingPopup.remove();
+            init();
+        },
+
+        updateTemplates: function(newTemplates) {
+            config.templates = newTemplates;
+            this.updateConfig({});
+        },
+
+        show: function() {
+            const button = document.querySelector('.wa-chat-button');
+            if (button) button.style.display = 'flex';
+        },
+
+        hide: function() {
+            const button = document.querySelector('.wa-chat-button');
+            if (button) button.style.display = 'none';
+        },
+
+        openPopup: function() {
+            const popup = document.querySelector('.wa-popup');
+            const button = document.querySelector('.wa-chat-button');
+            if (popup) {
+                popup.classList.add('show');
+                if (button) button.classList.add('active');
+            }
+        },
+
+        closePopup: function() {
+            const popup = document.querySelector('.wa-popup');
+            const button = document.querySelector('.wa-chat-button');
+            if (popup) {
+                popup.classList.remove('show');
+                if (button) button.classList.remove('active');
+            }
+        }
+    };
+
+    // Initialize
+    init();
+})();
+</script>
 </body>
 </html>
